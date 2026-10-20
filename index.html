@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>團隊排班與任務管理 Dashboard | Team Shift & Task Scheduler</title>
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- 頂部導航列 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">團隊排班與任務管理 Dashboard</h1>
+          <p class="text-xs text-slate-500 font-medium">Team Shift & Task Scheduler • 輕量單頁式架構</p>
+        </div>
+      </div>
+
+      <!-- 右側動作區：匯出與重設 -->
+      <div class="flex items-center gap-3">
+        <!-- 匯出選單 -->
+        <div class="relative">
+          <button id="exportDropdownBtn" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-xs transition-colors">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            <span>資料匯出</span>
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+
+          <!-- 下拉選單 -->
+          <div id="exportDropdownMenu" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-sm">
+            <button id="exportJsonBtn" type="button" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2">
+              <span class="text-base">📦</span>
+              <div>
+                <div class="font-medium">完整資料備份 (JSON)</div>
+                <div class="text-[11px] text-slate-400">含成員、排班與任務全部資料</div>
+              </div>
+            </button>
+            <div class="border-t border-slate-100 my-1"></div>
+            <button id="exportShiftsCsvBtn" type="button" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2">
+              <span class="text-base">📅</span>
+              <div>
+                <div class="font-medium">匯出排班清單 (CSV)</div>
+                <div class="text-[11px] text-slate-400">Excel / 試算表相容 (UTF-8)</div>
+              </div>
+            </button>
+            <button id="exportTasksCsvBtn" type="button" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2">
+              <span class="text-base">📋</span>
+              <div>
+                <div class="font-medium">匯出任務清單 (CSV)</div>
+                <div class="text-[11px] text-slate-400">Excel / 試算表相容 (UTF-8)</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 重設預設值 -->
+        <button id="resetDataBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors" title="清除修改並重設為預設範例資料">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span>重設範例資料</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- 頂部數據概覽卡片 -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <!-- 成員概況 -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">團隊規模</p>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span id="statTotalMembers" class="text-2xl font-black text-slate-900">5</span>
+            <span class="text-xs text-slate-500">位成員 (小明/小美/小華/小強/小雅)</span>
+          </div>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+          👥
+        </div>
+      </div>
+
+      <!-- 今日出勤 -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">今日出勤狀況</p>
+          <div class="mt-1 flex items-center gap-3 text-sm">
+            <span class="font-bold text-slate-800"><span id="statWorkingToday" class="text-indigo-600 text-lg">0</span> 在崗</span>
+            <span class="text-slate-300">|</span>
+            <span class="font-bold text-slate-800"><span id="statRemoteToday" class="text-teal-600 text-lg">0</span> 遠端</span>
+            <span class="text-slate-300">|</span>
+            <span class="font-bold text-slate-800"><span id="statOffToday" class="text-slate-500 text-lg">0</span> 休假</span>
+          </div>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+          🏢
+        </div>
+      </div>
+
+      <!-- 任務分佈 -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">任務分佈</p>
+          <div class="mt-1 flex items-center gap-2.5 text-xs font-medium">
+            <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">待辦 <span id="statTodoTasks" class="font-bold">0</span></span>
+            <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">進行中 <span id="statInProgressTasks" class="font-bold">0</span></span>
+            <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">已完成 <span id="statDoneTasks" class="font-bold">0</span></span>
+          </div>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+          📊
+        </div>
+      </div>
+
+      <!-- 任務完成率 -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">總體完成率</p>
+          <span id="statCompletionRate" class="text-lg font-black text-emerald-600">0%</span>
+        </div>
+        <div class="mt-3">
+          <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div id="statCompletionProgress" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div class="mt-1 text-[11px] text-slate-400 text-right">總計 <span id="statTotalTasks">0</span> 項任務</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 區塊一：週排班行事曆視圖 (Weekly Shift Calendar) -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-lg font-bold text-slate-900">週日曆排班視圖</h2>
+            <span class="px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+              點擊格位可快速換班
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">檢視與調整小明、小美、小華、小強、小雅 5 位成員的本週班表</p>
+        </div>
+
+        <!-- 週導航控制器 -->
+        <div class="flex items-center gap-2">
+          <div class="flex items-center bg-slate-100 p-1 rounded-xl">
+            <button id="prevWeekBtn" type="button" class="p-1.5 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition-all shadow-xs" title="上一週">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <span id="currentWeekRange" class="px-3 text-xs font-semibold text-slate-700 min-w-[140px] text-center">載入中...</span>
+            <button id="nextWeekBtn" type="button" class="p-1.5 hover:bg-white text-slate-600 hover:text-slate-900 rounded-lg transition-all shadow-xs" title="下一週">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+          <button id="todayWeekBtn" type="button" class="px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 rounded-xl transition-colors">
+            返回本週
+          </button>
+        </div>
+      </div>
+
+      <!-- 班別圖例 -->
+      <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-1">
+        <span class="font-semibold text-slate-400">班別圖例：</span>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <span>早班 (09:00 - 18:00)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+          <span>中班 (13:00 - 22:00)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+          <span>遠端 (WFH)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span>休假 (OFF)</span>
+        </div>
+      </div>
+
+      <!-- 日曆表格容器 -->
+      <div id="calendarContainer" class="pt-2"></div>
+    </section>
+
+    <!-- 區塊二：任務指派與狀態管理 (Task Management & Kanban) -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">任務指派與進度看板</h2>
+          <p class="text-xs text-slate-500 mt-0.5">即時指派任務給團隊成員，點擊卡片按鈕可一鍵切換「待辦 / 進行中 / 已完成」狀態</p>
+        </div>
+
+        <!-- 任務操作與篩選工具列 -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- 搜尋框 -->
+          <div class="relative">
+            <input 
+              id="searchTaskInput" 
+              type="text" 
+              placeholder="搜尋任務或成員..." 
+              class="w-44 sm:w-52 pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            >
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+
+          <!-- 成員篩選 -->
+          <select id="filterAssigneeSelect" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700">
+            <option value="all">全部成員</option>
+          </select>
+
+          <!-- 狀態篩選 -->
+          <select id="filterStatusSelect" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700">
+            <option value="all">全部狀態</option>
+            <option value="todo">待辦</option>
+            <option value="in_progress">進行中</option>
+            <option value="done">已完成</option>
+          </select>
+
+          <!-- 新增任務按鈕 -->
+          <button id="openNewTaskModalBtn" type="button" class="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm shadow-indigo-200 transition-all">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>新增任務</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 看板三欄容器 -->
+      <div id="taskKanbanContainer"></div>
+    </section>
+
+  </main>
+
+  <!-- 頁腳 -->
+  <footer class="mt-auto py-6 border-t border-slate-200/80 bg-white text-center text-xs text-slate-400">
+    <p>團隊排班與任務管理系統 • 單頁式純前端技術 (HTML + Tailwind CSS + Vanilla JS + LocalStorage)</p>
+  </footer>
+
+  <!-- 彈窗 1：排班編輯彈窗 (Shift Modal) -->
+  <div id="shiftModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5 transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 id="shiftModalTitle" class="text-base font-bold text-slate-900">修改排班設定</h3>
+          <p id="shiftModalDate" class="text-xs text-slate-500 mt-0.5">日期</p>
+        </div>
+        <button id="closeShiftModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">團隊成員</label>
+          <div id="shiftModalMemberName" class="font-bold text-slate-800 text-sm bg-slate-50 p-2.5 rounded-xl border border-slate-200">成員名稱</div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-2">選擇班別</label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="shiftTypeRadio" value="morning" class="text-indigo-600 focus:ring-indigo-500">
+              <span class="text-xs font-medium text-slate-800">早班 (09-18)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="shiftTypeRadio" value="evening" class="text-indigo-600 focus:ring-indigo-500">
+              <span class="text-xs font-medium text-slate-800">中班 (13-22)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="shiftTypeRadio" value="remote" class="text-indigo-600 focus:ring-indigo-500">
+              <span class="text-xs font-medium text-slate-800">遠端 (WFH)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="shiftTypeRadio" value="off" class="text-indigo-600 focus:ring-indigo-500">
+              <span class="text-xs font-medium text-slate-800">休假 (OFF)</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label for="shiftNoteInput" class="block text-xs font-semibold text-slate-500 mb-1">排班備註 (選填)</label>
+          <input 
+            type="text" 
+            id="shiftNoteInput" 
+            placeholder="例如：需支援跨組會議、上午請假1小時等..." 
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          >
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+        <button id="cancelShiftModalBtn" type="button" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+          取消
+        </button>
+        <button id="saveShiftModalBtn" type="button" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors">
+          儲存變更
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈窗 2：新增任務彈窗 (Task Modal) -->
+  <div id="taskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 transform transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900">建立新任務</h3>
+        <button id="closeTaskModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form id="taskForm" class="space-y-4">
+        <div>
+          <label for="taskTitleInput" class="block text-xs font-semibold text-slate-600 mb-1">任務名稱 <span class="text-red-500">*</span></label>
+          <input 
+            type="text" 
+            id="taskTitleInput" 
+            required 
+            placeholder="請輸入任務主旨 (例如：登入頁面效能調校)" 
+            class="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          >
+        </div>
+
+        <div>
+          <label for="taskDescInput" class="block text-xs font-semibold text-slate-600 mb-1">詳細說明</label>
+          <textarea 
+            id="taskDescInput" 
+            rows="3" 
+            placeholder="輸入任務詳細規格、相關連結或檢核項目..." 
+            class="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="taskAssigneeSelect" class="block text-xs font-semibold text-slate-600 mb-1">指派成員 <span class="text-red-500">*</span></label>
+            <select id="taskAssigneeSelect" required class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800">
+              <!-- 動態填入 5 位成員 -->
+            </select>
+          </div>
+
+          <div>
+            <label for="taskPrioritySelect" class="block text-xs font-semibold text-slate-600 mb-1">優先級</label>
+            <select id="taskPrioritySelect" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800">
+              <option value="high">🔥 高優先級</option>
+              <option value="medium" selected>⚡ 中優先級</option>
+              <option value="low">🌱 低優先級</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="taskDueDateInput" class="block text-xs font-semibold text-slate-600 mb-1">截止日期</label>
+            <input 
+              type="date" 
+              id="taskDueDateInput" 
+              class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800"
+            >
+          </div>
+
+          <div>
+            <label for="taskStatusSelect" class="block text-xs font-semibold text-slate-600 mb-1">初始狀態</label>
+            <select id="taskStatusSelect" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800">
+              <option value="todo" selected>待辦 (To Do)</option>
+              <option value="in_progress">進行中 (In Progress)</option>
+              <option value="done">已完成 (Done)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+          <button id="cancelTaskModalBtn" type="button" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+            取消
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors">
+            確認建立任務
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast 通知容器 -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- JavaScript 主入口 (支援 file:// 直接點擊開啟與本機伺服器) -->
+  <script src="js/bundle.js"></script>
+</body>
+</html>
